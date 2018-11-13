@@ -10,12 +10,9 @@
 	__typeof__ (b) _b = (b);\
 	_a > _b ? _a : _b;})
 
-// tipo funcao_de_restricaoicao (de funcao_de_restricaoicao) -> aceita variáveis (array de doubles)
-typedef double (*funcao_de_restricaoicao)(double*);
-
 // tipo func (função que será minimizada) -> aceita variáveis (array de doubles),
-// um parâmetro de penalidade e uma função de funcao_de_restricaoicao
-typedef double (*funcao_penalizada)(double*, double, funcao_de_restricaoicao);
+// um parâmetro de penalidade e uma função de restricao
+typedef double (*funcao)(double*, double);
 
 
 // soma de vetores: vetor1 + vetor2
@@ -79,23 +76,22 @@ int comparacao_com_escalar(double* vetor1, double escalar, int size){
 	return resultado;
 }
 
-// função de funcao_de_restricaoicao: (x1^2) + (x2^2) + (x3^2) - 1 = 0
+// função de restricao: (x1^2) + (x2^2) + (x3^2) - 1 = 0
 double funcao_de_restricao(double* variaveis){
 	return pow(variaveis[0], 2.0) + pow(variaveis[1], 2.0) + pow(variaveis[2], 2.0) - 1;
 }
 
 // função a ser minimizada
-double funcao_penalizada(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
+double funcao_penalizada(double* variaveis, double parametro_de_restricao){
 	double resultado = pow(variaveis[0], 3.0) + pow(variaveis[1], 3.0) + pow(variaveis[2], 3.0);
-	double funcao_de_restricaoicao = funcao_de_restricao(variaveis);
+	double restricao = funcao_de_restricao(variaveis);
 
-	funcao_de_restricaoicao = pow(funcao_de_restricaoicao, 2);
-	return resultado + parametro_de_restricao*funcao_de_restricaoicao;
+	restricao = pow(restricao, 2);
+	return resultado + parametro_de_restricao*restricao;
 }
 
 
-
-double* gradiente(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
+double* gradiente(double* variaveis, double parametro_de_restricao){
 	double* gradiente;
 	gradiente = (double*) calloc(3, sizeof(double));
 	
@@ -109,7 +105,7 @@ double* gradiente(double* variaveis, double parametro_de_restricao, funcao_de_re
 }
 
 
-double** segundo_gradiente(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
+double** segundo_gradiente(double* variaveis, double parametro_de_restricao){
 	double** segundo_gradiente;
 	segundo_gradiente = (double**) calloc(3, sizeof(double*));
 	
@@ -132,7 +128,36 @@ double** segundo_gradiente(double* variaveis, double parametro_de_restricao, fun
 	return segundo_gradiente;
 }
 
-/*double* buscaDeArmijo(func f, double* variaveis, double t, double* gradiente, double y, double parametro_de_restricao){
+double* buscaDeArmijo(funcao funcao_penalizada, double* variaveis, double* gradiente, double gradienteT_d, double parametro_de_restricao){
+    //resultadoReduzido é f(x' + td)
+    double resultadoReduzido, resultado, comparador, reducaoProporcional;
+
+    int t = 1;
+    double* temp = multiplicacao_com_escalar(gradiente, -t, 3);
+    double eta = 0.25;
+    double gamma = 0.8;
+    int k = 1;
+    double* xtd;
+
+    xtd = soma_de_vetores(variaveis, temp, 3);
+    resultadoReduzido = funcao_penalizada(xtd, parametro_de_restricao);
+    resultado = funcao_penalizada(variaveis, parametro_de_restricao);
+    reducaoProporcional = eta*t*gradienteT_d;
+    comparador = resultado + reducaoProporcional;
+
+    while (resultadoReduzido > comparador){
+        temp = multiplicacao_com_escalar(temp, gamma, 3);
+        xtd = soma_de_vetores(variaveis, temp, 3);
+        resultadoReduzido = funcao_penalizada(xtd, parametro_de_restricao);
+        t *= gamma;
+        reducaoProporcional = eta*t*gradienteT_d;
+        comparador = resultado + reducaoProporcional;
+        k++;
+    }
+    return xtd;
+}
+
+/*double* buscaDeArmijo(funcao funcao_penalizada, double* variaveis, double t, double* gradiente, double gradienteT_d, double parametro_de_restricao){
 	double resultadoReduzido, resultado, comparador, reducaoProporcional;
 
 	double* temp = multiplicacao_com_escalar(gradiente, -t, 3);
@@ -144,7 +169,7 @@ double** segundo_gradiente(double* variaveis, double parametro_de_restricao, fun
 	x = soma_de_vetores(variaveis, temp, 3);
 	resultadoReduzido = f(x, parametro_de_restricao);
 	resultado = f(variaveis, parametro_de_restricao);
-	reducaoProporcional = eta*t*y;
+	reducaoProporcional = eta*t*gradiente_transposto_d;
 	comparador = resultado + reducaoProporcional;
 
 	while (resultadoReduzido > comparador){
@@ -156,10 +181,10 @@ double** segundo_gradiente(double* variaveis, double parametro_de_restricao, fun
 		k++;
 	}
 	return x;
-}
+}*/
 
-void metodoDoGradiente(func f, double* variaveis, int reps, int parada, double parametro_de_restricao){
-	double y;
+void metodoDoGradiente(funcao funcao_penalizada, double* variaveis, int reps, int parada, double parametro_de_restricao){
+	double gradiente_transposto_d;
 	double beta = 3.0;
 	double variaveis0[3] = {0,0,0};
 
@@ -169,7 +194,7 @@ void metodoDoGradiente(func f, double* variaveis, int reps, int parada, double p
 
 		if(parada == 1 && comparacao_com_escalar(grad, 0, 3)) break;
 		
-		y = -(multiplicacao_de_vetores(grad, grad, 3));
+		gradiente_transposto_d = -(multiplicacao_de_vetores(grad, grad, 3));
 
 		double* x = buscaDeArmijo(f, variaveis, 1.0, grad, y, parametro_de_restricao);
 		
@@ -182,7 +207,7 @@ void metodoDoGradiente(func f, double* variaveis, int reps, int parada, double p
 		if (parada == 0 && delta < 1.0e-04) break;
 		parametro_de_restricao *= beta;
 	}
-}*/
+}
 
 void main(){
 	
@@ -195,6 +220,7 @@ void main(){
 	printf("\n");
 
 	double* grad = gradiente(x, parametro_de_restricao, funcao_de_restricao);
+
 	for (int i = 0; i < 3; i++)
 	{
 		printf("%f\n", grad[i]);
