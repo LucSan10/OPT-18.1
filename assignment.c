@@ -10,12 +10,12 @@
 	__typeof__ (b) _b = (b);\
 	_a > _b ? _a : _b;})
 
-// tipo restricao (de restricao) -> aceita variáveis (array de doubles)
-typedef double (*restricao)(double*);
+// tipo funcao_de_restricaoicao (de funcao_de_restricaoicao) -> aceita variáveis (array de doubles)
+typedef double (*funcao_de_restricaoicao)(double*);
 
 // tipo func (função que será minimizada) -> aceita variáveis (array de doubles),
-// um parâmetro de penalidade e uma função de restricao
-typedef double (*funcao)(double*, double, restricao);
+// um parâmetro de penalidade e uma função de funcao_de_restricaoicao
+typedef double (*funcao_penalizada)(double*, double, funcao_de_restricaoicao);
 
 
 // soma de vetores: vetor1 + vetor2
@@ -79,23 +79,23 @@ int comparacao_com_escalar(double* vetor1, double escalar, int size){
 	return resultado;
 }
 
-// função de restricao: (x1^2) + (x2^2) + (x3^2) - 1 = 0
+// função de funcao_de_restricaoicao: (x1^2) + (x2^2) + (x3^2) - 1 = 0
 double funcao_de_restricao(double* variaveis){
 	return pow(variaveis[0], 2.0) + pow(variaveis[1], 2.0) + pow(variaveis[2], 2.0) - 1;
 }
 
 // função a ser minimizada
-double funcao(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+double funcao_penalizada(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
 	double resultado = pow(variaveis[0], 3.0) + pow(variaveis[1], 3.0) + pow(variaveis[2], 3.0);
-	double restricao = funcao_de_restricao(variaveis);
+	double funcao_de_restricaoicao = funcao_de_restricao(variaveis);
 
-	restricao = pow(restricao, 2);
-	return resultado + parametro_de_restricao*restricao;
+	funcao_de_restricaoicao = pow(funcao_de_restricaoicao, 2);
+	return resultado + parametro_de_restricao*funcao_de_restricaoicao;
 }
 
 
 
-double* gradiente(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+double* gradiente(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
 	double* gradiente;
 	gradiente = (double*) calloc(3, sizeof(double));
 	
@@ -108,7 +108,8 @@ double* gradiente(double* variaveis, double parametro_de_restricao, restricao fu
 	return gradiente;
 }
 
-double** segundo_gradiente(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+
+double** segundo_gradiente(double* variaveis, double parametro_de_restricao, funcao_de_restricaoicao funcao_de_restricao){
 	double** segundo_gradiente;
 	segundo_gradiente = (double**) calloc(3, sizeof(double*));
 	
@@ -188,7 +189,7 @@ void main(){
 	double x[3] = {1,2,3};
 	double parametro_de_restricao = 9;
 	
-	double res = funcao(x, parametro_de_restricao, funcao_de_restricao);
+	double res = funcao_penalizada(x, parametro_de_restricao, funcao_de_restricao);
 	printf("%f\n", res);
 	
 	printf("\n");
