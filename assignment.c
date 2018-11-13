@@ -3,113 +3,153 @@
 #include "math.h"
 
 #define NUM 3
+
+// função max() -> retorna o máximo entre 2 elementos
 #define max(a,b) \
 	({__typeof__ (a) _a = (a);\
 	__typeof__ (b) _b = (b);\
 	_a > _b ? _a : _b;})
 
-#define compare(c,d) \
-	({__typeof__ (c) _c = (c);\
-	__typeof__ (d) _d = (d);\
-	_c > _d ? 1 : ( _c < _d ? -1 : 0 );})
+// tipo restricao (de restricao) -> aceita variáveis (array de doubles)
+typedef double (*restricao)(double*);
 
-typedef double (*rst)(double*);
-typedef double (*func)(double*, double, rst);
+// tipo func (função que será minimizada) -> aceita variáveis (array de doubles),
+// um parâmetro de penalidade e uma função de restricao
+typedef double (*funcao)(double*, double, restricao);
 
-double* vectorSum(double* x1, double* x2, int size){
-	double* res = calloc(size, sizeof(double));
-	for (int i = 0; i < size; i++) res[i] = x1[i] + x2[i];
-	return res;
+
+// soma de vetores: vetor1 + vetor2
+double* soma_de_vetores(double* vetor1, double* vetor2, int size){
+	double* resultado = calloc(size, sizeof(double));
+	
+	for (int i = 0; i < size; i++)
+	{
+		resultado[i] = vetor1[i] + vetor2[i];
+	}
+
+	return resultado;
 }
 
-double vectorMult(double* x1, double* x2, int size){
-	double res = 0.0;
-	for (int i = 0; i < size; i++) res += x1[i] * x2[i];
-	return res;
+// multiplicação vetorial: vetor1 * vetor2
+double multiplicacao_de_vetores(double* vetor1, double* vetor2, int size){
+	double resultado = 0.0;
+	
+	for (int i = 0; i < size; i++)
+	{
+		resultado += vetor1[i] * vetor2[i];
+	}
+
+	return resultado;
 }
 
-double* scalarSum(double* x1, double scalar, int size){
-	double* res = calloc(size, sizeof(double));
-	for (int i = 0; i < size; i++) res[i] = x1[i] + scalar;
-	return res;
+// soma de vetor e escalar: vetor1 + escalar
+double* soma_com_escalar(double* vetor1, double escalar, int size){
+	double* resultado = calloc(size, sizeof(double));
+	
+	for (int i = 0; i < size; i++)
+	{
+		resultado[i] = vetor1[i] + escalar;
+	}
+
+	return resultado;
 }
 
-double* scalarMult(double* x1, double scalar, int size){
-	double* res = calloc(size, sizeof(double));
-	for (int i = 0; i < size; i++) res[i] = x1[i] * scalar;
-	return res;
+// multiplicação de vetor e escalar: escalar * vetor
+double* multiplicacao_com_escalar(double* vetor1, double escalar, int size){
+	double* resultado = calloc(size, sizeof(double));
+	
+	for (int i = 0; i < size; i++)
+	{
+		resultado[i] = vetor1[i] * escalar;
+	}
+
+	return resultado;
 }
 
-int scalarEqual(double* x1, double scalar, int size){
-	int res = 1;
-	for (int i = 0; i < size; i++) res = res && (x1[i] == scalar);
-	return res;
+// comparação entre escalar e vetor:
+// se todo elemento de um vetor == escalar, então retorna 1
+int comparacao_com_escalar(double* vetor1, double escalar, int size){
+	int resultado = 1;
+
+	for (int i = 0; i < size; i++)
+	{
+		resultado = resultado && (vetor1[i] == escalar);
+	}
+
+	return resultado;
 }
 
-
-double restr(double* vars){
-	return pow(vars[0], 2.0) + pow(vars[1], 2.0) + pow(vars[2], 2.0) - 1;
+// função de restricao: (x1^2) + (x2^2) + (x3^2) - 1 = 0
+double funcao_de_restricao(double* variaveis){
+	return pow(variaveis[0], 2.0) + pow(variaveis[1], 2.0) + pow(variaveis[2], 2.0) - 1;
 }
 
-
-double funcao(double* vars, double rho, rst restr){
-	double resultado = pow(vars[0], 3.0) + pow(vars[1], 3.0) + pow(vars[2], 3.0);
-	double restricao = restr(vars);
+// função a ser minimizada
+double funcao(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+	double resultado = pow(variaveis[0], 3.0) + pow(variaveis[1], 3.0) + pow(variaveis[2], 3.0);
+	double restricao = funcao_de_restricao(variaveis);
 
 	restricao = pow(restricao, 2);
-	return resultado + rho*restricao;
+	return resultado + parametro_de_restricao*restricao;
 }
 
 
 
-double* gradiente(double* vars, double rho, rst restr){
-	double* grad;
-	double t = 4*rho*restr(vars);
-	grad = (double*) calloc(3, sizeof(double));
-	for (int i = 0; i < 3; i++){
-		grad[i] = 3*pow(vars[i], 2) + vars[i]*t;
+double* gradiente(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+	double* gradiente;
+	gradiente = (double*) calloc(3, sizeof(double));
+	
+	double t = 4*parametro_de_restricao*funcao_de_restricao(variaveis);
+	for (int i = 0; i < 3; i++)
+	{
+		grad[i] = 3*pow(variaveis[i], 2) + variaveis[i]*t;
 	}
-	return grad;
+	
+	return gradiente;
 }
 
-double** segundoGradiente(double* vars, double rho, rst restr){
-	double** segGrad;
-	double t = 4*rho*restr(vars);
-	segGrad = (double**) calloc(3, sizeof(double*));
-	for (int i = 0; i < 3; i++){
-		segGrad[i] = (double*) calloc(3, sizeof(double));
+double** segundo_gradiente(double* variaveis, double parametro_de_restricao, restricao funcao_de_restricao){
+	double** segundo_gradiente;
+	segundo_gradiente = (double**) calloc(3, sizeof(double*));
+	
+	double t = 4*parametro_de_restricao*funcao_de_restricao(variaveis);
+	for (int i = 0; i < 3; i++)
+	{
+		segundo_gradiente[i] = (double*) calloc(3, sizeof(double));
 		
-		double temp = 8*vars[i]*rho;
-		segGrad[i][i] = 6*vars[i] + temp*vars[i] + t;
+		double temp = 8*variaveis[i]*parametro_de_restricao;
+		segundo_gradiente[i][i] = 6*variaveis[i] + temp*variaveis[i] + t;
 		
-		for (int j = 0; j < i; j++){
-			double temp2 = temp*vars[j];
-			segGrad[i][j] = temp*vars[j];
-			segGrad[j][i] = temp*vars[j];
+		for (int j = 0; j < i; j++)
+		{
+			double temp2 = temp*variaveis[j];
+			segundo_gradiente[i][j] = temp*variaveis[j];
+			segundo_gradiente[j][i] = temp*variaveis[j];
 		}
 	}
-	return segGrad;
+	
+	return segundo_gradiente;
 }
 
-/*double* buscaDeArmijo(func f, double* vars, double t, double* gradiente, double y, double rho){
+/*double* buscaDeArmijo(func f, double* variaveis, double t, double* gradiente, double y, double parametro_de_restricao){
 	double resultadoReduzido, resultado, comparador, reducaoProporcional;
 
-	double* temp = scalarMult(gradiente, -t, 3);
+	double* temp = multiplicacao_com_escalar(gradiente, -t, 3);
 	double eta = 0.25;
 	double gamma = 0.8;
 	int k = 1;
 	double* x;
 
-	x = vectorSum(vars, temp, 3);
-	resultadoReduzido = f(x, rho);
-	resultado = f(vars, rho);
+	x = soma_de_vetores(variaveis, temp, 3);
+	resultadoReduzido = f(x, parametro_de_restricao);
+	resultado = f(variaveis, parametro_de_restricao);
 	reducaoProporcional = eta*t*y;
 	comparador = resultado + reducaoProporcional;
 
 	while (resultadoReduzido > comparador){
-		temp = scalarMult(temp, gamma, 3);
-		x = vectorSum(vars, temp, 3);
-		resultadoReduzido = f(x, rho);
+		temp = multiplicacao_com_escalar(temp, gamma, 3);
+		x = soma_de_vetores(variaveis, temp, 3);
+		resultadoReduzido = f(x, parametro_de_restricao);
 		reducaoProporcional *= t;
 		comparador = resultado + reducaoProporcional;
 		k++;
@@ -117,43 +157,43 @@ double** segundoGradiente(double* vars, double rho, rst restr){
 	return x;
 }
 
-void metodoDoGradiente(func f, double* vars, int reps, int parada, double rho){
+void metodoDoGradiente(func f, double* variaveis, int reps, int parada, double parametro_de_restricao){
 	double y;
 	double beta = 3.0;
-	double vars0[3] = {0,0,0};
+	double variaveis0[3] = {0,0,0};
 
 	for (int k = 0; k < reps; k++){
 		double delta = 0.0;
-		double* grad = gradiente(vars);
+		double* grad = gradiente(variaveis);
 
-		if(parada == 1 && scalarEqual(grad, 0, 3)) break;
+		if(parada == 1 && comparacao_com_escalar(grad, 0, 3)) break;
 		
-		y = -(vectorMult(grad, grad, 3));
+		y = -(multiplicacao_de_vetores(grad, grad, 3));
 
-		double* x = buscaDeArmijo(f, vars, 1.0, grad, y, rho);
+		double* x = buscaDeArmijo(f, variaveis, 1.0, grad, y, parametro_de_restricao);
 		
 		for (int i = 0; i < 3; i++){
-			vars0[i] = vars[i];
-			vars[i] = x[i];
-			delta += vars[i] - vars0[i];
+			variaveis0[i] = variaveis[i];
+			variaveis[i] = x[i];
+			delta += variaveis[i] - variaveis0[i];
 		}
 
 		if (parada == 0 && delta < 1.0e-04) break;
-		rho *= beta;
+		parametro_de_restricao *= beta;
 	}
 }*/
 
 void main(){
 	
 	double x[3] = {1,2,3};
-	double rho = 9;
+	double parametro_de_restricao = 9;
 	
-	double res = funcao(x, rho, restr);
+	double res = funcao(x, parametro_de_restricao, funcao_de_restricao);
 	printf("%f\n", res);
 	
 	printf("\n");
 
-	double* grad = gradiente(x, rho, restr);
+	double* grad = gradiente(x, parametro_de_restricao, funcao_de_restricao);
 	for (int i = 0; i < 3; i++)
 	{
 		printf("%f\n", grad[i]);
@@ -161,7 +201,7 @@ void main(){
 
 	printf("\n");
 	
-	double** secGrad = segundoGradiente(x, rho, restr);
+	double** secGrad = segundoGradiente(x, parametro_de_restricao, funcao_de_restricao);
 	for (int i = 0; i < 3; i++)
 	{	
 		for (int j = 0; j < 2; j++)
