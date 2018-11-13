@@ -7,7 +7,7 @@
 void main(){
 	
 	char* info;
-	double x[3] = {-1,-2,-3};
+	double x[3] = {-1,2,-3};
 	double parametro_de_restricao = 4;
 	
 	info = metodoDoGradiente(funcao_penalizada, x, 50, parametro_de_restricao);

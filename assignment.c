@@ -175,8 +175,7 @@ double* busca_de_armijo(funcao funcao_penalizada, double* variaveis, double* gra
 	    comparador = resultado + reducaoProporcional;
 	    k++;
 	}
-
-    return xtd;
+	return xtd;
 }
 
 
@@ -198,8 +197,12 @@ char* metodoDoGradiente(funcao funcao_penalizada, double* variaveis, int repetic
 			variaveis[i] = x[i];
 			delta += variaveis[i] - variaveis0[i];
 		}
-
-		if (delta < 1.0e-04) return "Delta = 0";
+		for (int i = 0; i < 3; ++i)
+		{
+			printf("vars = %f, %f\n", variaveis[i], variaveis0[i]);
+		}
+		printf("delta = %f, fodase = %d\n", delta, k);
+		if (fabs(delta) <= 1.0e-10) return "Delta = 0";
 		parametro_de_restricao *= beta;
 	}
 	return "Número de iterações excedidas";
