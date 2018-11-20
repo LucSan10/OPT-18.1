@@ -203,6 +203,7 @@ char* metodoDoGradiente(funcao funcao_penalizada, double* variaveis, int repetic
 		{
 			printf("%f\n", grad[i]);
 		}
+		if (comparacao_com_escalar(grad, 0, NUM)) return "∇f(x) = 0";
 
 		double* x = busca_de_armijo(funcao_penalizada, variaveis, grad, parametro_de_restricao, &j);
 

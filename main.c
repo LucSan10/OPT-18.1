@@ -9,7 +9,7 @@
 void main(){
 	
 	char* info;
-	double x[3] = {-3,-50,-4};
+	double x[3] = {0.0,0.0,0.0};
 	double parametro_de_restricao = 4.0;
 	double x0[3];
 
