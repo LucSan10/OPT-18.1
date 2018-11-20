@@ -87,17 +87,27 @@ double funcao_penalizada(double* variaveis, double parametro_de_restricao){
 	double resultado = pow(variaveis[0], 3.0) + pow(variaveis[1], 3.0) + pow(variaveis[2], 3.0);
 	double restricao = funcao_de_restricao(variaveis);
 
-	restricao = pow(restricao, 2);
+	restricao = pow(restricao, 2.0);
 	return resultado + parametro_de_restricao*restricao;
+	return resultado;
 }
 
 
-double* gradiente(double* variaveis, double parametro_de_restricao){
+double norm2(double* vetor, int size){
+	double resultado = 0;
+	for (int i = 0; i < size; i++){
+		resultado += pow(vetor[i], 2);
+	}
+	return sqrt(resultado);
+}
+
+
+double* gradiente(double* variaveis, double parametro_de_restricao, int size){
 	double* gradiente;
-	gradiente = (double*) calloc(3, sizeof(double));
+	gradiente = (double*) calloc(size, sizeof(double));
 	
 	double t = 4*parametro_de_restricao*funcao_de_restricao(variaveis);
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < size; i++)
 	{
 		gradiente[i] = 3*pow(variaveis[i], 2) + variaveis[i]*t;
 	}
@@ -131,22 +141,19 @@ double** segundo_gradiente(double* variaveis, double parametro_de_restricao){
 }
 */
 
-double* busca_de_armijo(funcao funcao_penalizada, double* variaveis, double* gradiente, double parametro_de_restricao){
+double* busca_de_armijo(funcao funcao_penalizada, double* variaveis, double* gradiente, double parametro_de_restricao, int* k){
     // resultado = f(x');
     // resultadoReduzido = f(x' + td);
 	// reducaoProporcional = η * t * ∇f(x')T * d;
 	// comparador = f(x') + η * t * ∇f(x')T * d;
 	// variáveis = x';
 	// gradienteT_d = ∇f(x')T * d.
-
-    double resultado, resultadoReduzido, reducaoProporcional, comparador, gradienteT_d;
+	printf("Iniciando Busca de Armijo\n");
+    double resultado, resultadoReduzido, reducaoProporcional, comparador;
     double t = 1;
 
-    // gradienteT_d = ∇f(x')T * d
-    gradienteT_d = -(multiplicacao_de_vetores(gradiente, gradiente, 3));
-    
     // temp = td (no método do Gradiente -> t * -(∇f(x')T))
-    double* temp = multiplicacao_com_escalar(gradiente, -t, 3);
+    double* temp = multiplicacao_com_escalar(gradiente, -t, NUM);
     
     // η
     double eta = 0.25;
@@ -154,26 +161,24 @@ double* busca_de_armijo(funcao funcao_penalizada, double* variaveis, double* gra
     // γ
     double gamma = 0.8;
 
-    int k = 1;
-
     // x' + td
     double* xtd;
-
-	xtd = soma_de_vetores(variaveis, temp, 3);
-	resultadoReduzido = funcao_penalizada(xtd, parametro_de_restricao);
+	xtd = soma_de_vetores(variaveis, temp, NUM);
+	
     resultado = funcao_penalizada(variaveis, parametro_de_restricao);
-    reducaoProporcional = eta*t*gradienteT_d;
+	resultadoReduzido = funcao_penalizada(xtd, parametro_de_restricao);
+	reducaoProporcional = eta*multiplicacao_de_vetores(gradiente, temp, NUM);
+	
 	comparador = resultado + reducaoProporcional;
-
     while (resultadoReduzido > comparador)
     {
-	    temp = multiplicacao_com_escalar(temp, gamma, 3);
+	    temp = multiplicacao_com_escalar(temp, gamma, NUM);
 	    free(xtd);
-	    xtd = soma_de_vetores(variaveis, temp, 3);
+	    xtd = soma_de_vetores(variaveis, temp, NUM);
 	    resultadoReduzido = funcao_penalizada(xtd, parametro_de_restricao);
 	    reducaoProporcional *= gamma;
 	    comparador = resultado + reducaoProporcional;
-	    k++;
+	    (*k)++;
 	}
 	return xtd;
 }
@@ -181,29 +186,60 @@ double* busca_de_armijo(funcao funcao_penalizada, double* variaveis, double* gra
 
 
 char* metodoDoGradiente(funcao funcao_penalizada, double* variaveis, int repeticoes, double parametro_de_restricao){
-	double beta = 3.0;
-	double variaveis0[3] = {0,0,0};
+	printf("\n");
+	double beta = 5.0;
+	double fx0, fx1;
+	double variaveis0[NUM] = {0.0,0.0,0.0};
+	
+	int j = 0;
+	fx0 = funcao_penalizada(variaveis0, parametro_de_restricao);
 
 	for (int k = 0; k < repeticoes; k++){
-		double delta = 0.0;
-		double* grad = gradiente(variaveis, parametro_de_restricao);
+		double delta[NUM] = {0.0,0.0,0.0};
+		double fdelta = 0.0;
+		double* grad = gradiente(variaveis, parametro_de_restricao, NUM);
+		printf("∇f(x):\n");
+		for (int i = 0; i < NUM; i++)
+		{
+			printf("%f\n", grad[i]);
+		}
 
-		if(comparacao_com_escalar(grad, 0, 3)) return "Gradiente = 0";
+		double* x = busca_de_armijo(funcao_penalizada, variaveis, grad, parametro_de_restricao, &j);
 
-		double* x = busca_de_armijo(funcao_penalizada, variaveis, grad, parametro_de_restricao);
+		fx1 = funcao_penalizada(x, parametro_de_restricao);
 
-		for (int i = 0; i < 3; i++){
+		for (int i = 0; i < NUM; i++){
 			variaveis0[i] = variaveis[i];
 			variaveis[i] = x[i];
-			delta += variaveis[i] - variaveis0[i];
+			delta[i] = variaveis[i] - variaveis0[i];
 		}
-		for (int i = 0; i < 3; ++i)
+		fdelta = fx1-fx0;
+
+		printf("\nx[k-1]:\n");
+		for (int i = 0; i < NUM; i++)
 		{
-			printf("vars = %f, %f\n", variaveis[i], variaveis0[i]);
+			printf("%f\n", variaveis0[i]);
 		}
-		printf("delta = %f, fodase = %d\n", delta, k);
-		if (fabs(delta) <= 1.0e-10) return "Delta = 0";
+
+		printf("\n");
+		printf("Iterações totais da Busca de Armijo: %d\n", j);
+		printf("Iterações totais do Método do Gradiente: %d\n\n", k);
+		
+		printf("Δx = \n");
+		for (int i = 0; i < NUM; i++)
+		{
+			printf("%f\n", delta[i]);
+		}
+
+		double norm = norm2(delta, NUM);
+		printf("\n||Δx||2 = %f\n", norm);
+
+		printf("\nΔ(f(x)) = %f\n\n--------------------------------------------\n\n", fdelta);
+
+		if (norm <= 1.0e-7) return "||Δx||2 = 0";
+		if (fabs(fdelta) <= 1.0e-7) return "Δ(f(x)) = 0";
 		parametro_de_restricao *= beta;
+		fx0 = fx1;
 	}
 	return "Número de iterações excedidas";
 }
